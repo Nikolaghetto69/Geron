@@ -1,0 +1,731 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Фонтан Герона — интерактивная сборка</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Segoe UI', Tahoma, sans-serif;
+    background: linear-gradient(135deg, #1a2a3a, #2c3e50, #34495e);
+    color: #ecf0f1;
+    min-height: 100vh;
+    padding: 20px;
+  }
+  header {
+    text-align: center;
+    padding: 30px 20px;
+    margin-bottom: 20px;
+  }
+  header h1 {
+    font-size: 2.4em;
+    background: linear-gradient(90deg, #3498db, #2ecc71, #27ae60);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: 10px;
+  }
+  header p { color: #bdc3c7; font-size: 1.15em; }
+
+  nav {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    justify-content: center;
+    margin-bottom: 30px;
+  }
+  nav button {
+    background: rgba(255,255,255,0.08);
+    color: #ecf0f1;
+    border: 1px solid rgba(255,255,255,0.2);
+    padding: 12px 20px;
+    border-radius: 25px;
+    cursor: pointer;
+    font-size: 1em;
+    transition: all 0.25s;
+  }
+  nav button:hover { background: rgba(52,152,219,0.3); transform: translateY(-2px); }
+  nav button.active {
+    background: linear-gradient(135deg, #3498db, #2980b9);
+    border-color: transparent;
+    box-shadow: 0 4px 15px rgba(52,152,219,0.5);
+  }
+
+  .experiment {
+    display: none;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 16px;
+    padding: 25px;
+    max-width: 1200px;
+    margin: 0 auto;
+    backdrop-filter: blur(10px);
+  }
+  .experiment.active { display: block; animation: fade 0.4s; }
+  @keyframes fade { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; } }
+
+  .experiment h2 {
+    color: #3498db;
+    margin-bottom: 10px;
+    font-size: 1.7em;
+  }
+  .experiment .subtitle { color: #bdc3c7; margin-bottom: 20px; font-style: italic; }
+
+  .layout {
+    display: grid;
+    grid-template-columns: 1fr 340px;
+    gap: 20px;
+  }
+  @media (max-width: 900px) { .layout { grid-template-columns: 1fr; } }
+
+  canvas {
+    width: 100%;
+    height: auto;
+    background: #0a1929;
+    border-radius: 12px;
+    border: 1px solid rgba(52,152,219,0.3);
+    display: block;
+  }
+
+  .controls {
+    background: rgba(0,0,0,0.3);
+    border-radius: 12px;
+    padding: 18px;
+  }
+  .controls h3 {
+    color: #5dade2;
+    margin-bottom: 12px;
+    font-size: 1.15em;
+  }
+  .control {
+    margin-bottom: 14px;
+  }
+  .control label {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.9em;
+    margin-bottom: 5px;
+    color: #d5dbdb;
+  }
+  .control label span { color: #3498db; font-weight: bold; }
+  input[type="range"] {
+    width: 100%;
+    accent-color: #3498db;
+  }
+  button.action {
+    width: 100%;
+    padding: 12px;
+    background: linear-gradient(135deg, #27ae60, #229954);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 1em;
+    margin-top: 8px;
+    transition: transform 0.2s;
+    font-weight: bold;
+  }
+  button.action:hover { transform: scale(1.03); }
+  button.action:disabled {
+    background: #7f8c8d;
+    cursor: not-allowed;
+    transform: none;
+  }
+  button.reset {
+    background: linear-gradient(135deg, #e74c3c, #c0392b);
+  }
+
+  .info {
+    margin-top: 20px;
+    padding: 18px;
+    background: rgba(52,152,219,0.1);
+    border-left: 3px solid #3498db;
+    border-radius: 8px;
+    line-height: 1.7;
+  }
+  .info h4 { color: #5dade2; margin-bottom: 8px; }
+  .formula {
+    background: rgba(0,0,0,0.4);
+    padding: 10px 14px;
+    border-radius: 6px;
+    font-family: 'Cambria Math', serif;
+    font-size: 1.15em;
+    color: #fff;
+    margin: 10px 0;
+    display: inline-block;
+  }
+  .readout {
+    font-family: 'Consolas', monospace;
+    background: #000;
+    color: #3498db;
+    padding: 12px;
+    border-radius: 6px;
+    margin-top: 12px;
+    font-size: 0.95em;
+    line-height: 1.6;
+  }
+
+  .instruction {
+    background: rgba(46,204,113,0.1);
+    border: 2px solid #2ecc71;
+    border-radius: 12px;
+    padding: 20px;
+    margin-top: 20px;
+  }
+  .instruction h3 {
+    color: #2ecc71;
+    margin-bottom: 15px;
+    font-size: 1.3em;
+  }
+  .instruction img {
+    width: 100%;
+    max-width: 600px;
+    margin: 20px auto;
+    display: block;
+    border-radius: 8px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+  }
+  .instruction video {
+    width: 100%;
+    max-width: 600px;
+    margin: 20px auto;
+    display: block;
+    border-radius: 8px;
+  }
+  .instruction .video-container {
+    position: relative;
+    padding-bottom: 56.25%;
+    height: 0;
+    overflow: hidden;
+    max-width: 600px;
+    margin: 20px auto;
+    border-radius: 8px;
+  }
+  .instruction .video-container iframe {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    border-radius: 8px;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>⛲ Фонтан Герона</h1>
+  <p>Интерактивное изучение и сборка древнего устройства</p>
+</header>
+
+<nav id="nav">
+  <button data-exp="0" class="active">1. Сообщающиеся сосуды</button>
+  <button data-exp="1">2. Гидростатическое давление</button>
+  <button data-exp="2">3. Вытеснение воздуха</button>
+  <button data-exp="3">4. Сборка фонтана</button>
+</nav>
+
+<!-- ===== ЭКСПЕРИМЕНТ 0: СООБЩАЮЩИЕСЯ СОСУДЫ ===== -->
+<section class="experiment active" id="exp0">
+  <h2>Сообщающиеся сосуды</h2>
+  <p class="subtitle">Уровень жидкости в соединённых сосудах всегда одинаков</p>
+  <div class="layout">
+    <canvas id="c0" width="800" height="450"></canvas>
+    <div class="controls">
+      <h3>Параметры</h3>
+      <div class="control">
+        <label>Уровень в левом сосуде <span id="v0l">200 пикс</span></label>
+        <input type="range" id="s0l" min="100" max="350" value="200">
+      </div>
+      <div class="control">
+        <label>Уровень в правом сосуде <span id="v0r">300 пикс</span></label>
+        <input type="range" id="s0r" min="100" max="350" value="300">
+      </div>
+      <button class="action" onclick="connectVessels()">🔗 Соединить сосуды</button>
+      <div class="readout" id="r0">Сосуды разделены<br>Перемещайте слайдеры для изменения уровней</div>
+    </div>
+  </div>
+  <div class="info">
+    <h4>📘 Физика</h4>
+    <div class="formula">p₁ = p₂ ⇒ ρgh₁ = ρgh₂ ⇒ h₁ = h₂</div>
+    <p>В сообщающихся сосудах давление на одном уровне должно быть одинаковым. Поэтому уровень жидкости устанавливается на одной высоте, независимо от формы сосудов.</p>
+    <h4 style="margin-top:12px"> Связь с фонтаном</h4>
+    <p>Фонтан Герона использует три сосуда, соединённых трубками. Вода перетекает из верхнего в нижний, вытесняя воздух, который поднимает воду из среднего сосуда.</p>
+  </div>
+</section>
+
+<!-- ===== ЭКСПЕРИМЕНТ 1: ГИДРОСТАТИЧЕСКОЕ ДАВЛЕНИЕ ===== -->
+<section class="experiment" id="exp1">
+  <h2>Гидростатическое давление</h2>
+  <p class="subtitle">Давление зависит от высоты столба жидкости — чем выше, тем дальше летит струя</p>
+  <div class="layout">
+    <canvas id="c1" width="800" height="450"></canvas>
+    <div class="controls">
+      <h3>Параметры</h3>
+      <div class="control">
+        <label>Высота столба воды H <span id="v1h">2.0 м</span></label>
+        <input type="range" id="s1h" min="5" max="40" value="20">
+      </div>
+      <div class="control">
+        <label>Плотность жидкости ρ <span id="v1rho">1000 кг/м³</span></label>
+        <input type="range" id="s1rho" min="800" max="1300" value="1000">
+      </div>
+      <div class="readout" id="r1">Давление у отверстия: 19.6 кПа<br>Скорость истечения: 6.3 м/с<br>Дальность полёта: 2.8 м</div>
+    </div>
+  </div>
+  <div class="info">
+    <h4>📘 Физика</h4>
+    <div class="formula">p = ρgH,  v = √(2gH),  L = v·√(2h/g)</div>
+    <p>Давление на боковой стенке сосуда создаёт скорость истечения жидкости. Чем выше столб воды над отверстием — тем больше скорость и дальность полёта струи. Это закон Торричелли.</p>
+    <h4 style="margin-top:12px">🔧 Связь с фонтаном</h4>
+    <p>В фонтане Герона высота столба воды в верхнем сосуде определяет давление, которое вытесняет воздух из нижнего сосуда. Этот воздух поднимает воду из среднего сосуда на высоту, близкую к высоте падения.</p>
+  </div>
+</section>
+
+<!-- ===== ЭКСПЕРИМЕНТ 2: ВЫТЕСНЕНИЕ ВОЗДУХА ===== -->
+<section class="experiment" id="exp2">
+  <h2>Вытеснение воздуха водой</h2>
+  <p class="subtitle">Вода, втекая в закрытый сосуд, выталкивает воздух и поднимает поршень</p>
+  <div class="layout">
+    <canvas id="c2" width="800" height="450"></canvas>
+    <div class="controls">
+      <h3>Параметры</h3>
+      <div class="control">
+        <label>Скорость подачи воды <span id="v2v">50%</span></label>
+        <input type="range" id="s2v" min="10" max="100" value="50">
+      </div>
+      <button class="action" onclick="startFlow()"> Начать подачу воды</button>
+      <button class="action reset" onclick="resetFlow()"> Сбросить</button>
+      <div class="readout" id="r2">Воздух вытесняется из сосуда<br>Поршень поднимается<br>Нажмите кнопку для начала</div>
+    </div>
+  </div>
+  <div class="info">
+    <h4>📘 Физика</h4>
+    <div class="formula">V_воздуха + V_воды = const,  p·V = const (изотермически)</div>
+    <p>Когда вода втекает в закрытый сосуд, она занимает место воздуха. Воздух сжимается и создаёт давление, которое может двигать поршень или перемещаться по трубке в другой сосуд.</p>
+    <h4 style="margin-top:12px">🔧 Связь с фонтаном</h4>
+    <p>Это ключевой механизм фонтана Герона: вода из верхнего сосуда стекает в нижний, вытесняя воздух. Этот воздух по трубке поднимается в средний сосуд и выдавливает воду вверх — так работает фонтан!</p>
+  </div>
+</section>
+
+<!-- ===== ЭКСПЕРИМЕНТ 3: СБОРКА ФОНТАНА ГЕРОНА ===== -->
+<section class="experiment" id="exp3">
+  <h2>Сборка фонтана Герона</h2>
+  <p class="subtitle">Пошаговая инструкция по сборке работающего фонтана</p>
+  
+  <div class="instruction">
+    <h3>📋 Как работает фонтан Герона</h3>
+    <img src="fontan-gerona.jpg" alt="Схема фонтана Герона" onerror="this.style.display='none'">
+    
+    <p><strong>Принцип работы:</strong> Фонтан Герона — это устройство, которое создаёт струю воды без насоса, используя только гидростатическое давление и вытеснение воздуха. Состоит из трёх сосудов:</p>
+    <ul style="margin: 10px 0 10px 20px; line-height: 1.8;">
+      <li><strong>Верхний сосуд</strong> (открытый) — сюда наливаем воду</li>
+      <li><strong>Средний сосуд</strong> (закрытый) — заполнен водой, отсюда бьёт фонтан</li>
+      <li><strong>Нижний сосуд</strong> (закрытый) — сюда стекает вода из верхнего</li>
+    </ul>
+    
+    <p>Вода из верхнего сосуда стекает в нижний, вытесняя воздух. Воздух по трубке поднимается в средний сосуд и создаёт давление, которое выдавливает воду из среднего сосуда вверх — получается фонтан!</p>
+
+    <h3 style="margin-top: 25px;">🎥 Видео демонстрация</h3>
+    <div class="video-container">
+      <iframe width="480" height="270" src="https://dzen.ru/embed/vcNanxsOO_0M?from_block=partner&from=zen&mute=0&autoplay=0&tv=0" allow="autoplay; fullscreen; accelerometer; gyroscope; picture-in-picture; encrypted-media" ceC9i05Sl9d2ldUM="embed-iframe" frameborder="0" scrolling="no" allowfullscreen></iframe>
+    </div>
+
+    <h3 style="margin-top: 25px;">🛠️ Что понадобится</h3>
+    <ul style="margin: 10px 0 10px 20px; line-height: 1.8;">
+      <li>3 пластиковые бутылки (0.5–1 л) — лучше одинакового размера</li>
+      <li>Трубки для коктейлей или силиконовые шланги (3 штуки, длина 30–50 см)</li>
+      <li>Пластилин, горячий клей или герметик для уплотнения</li>
+      <li>Ножницы или канцелярский нож</li>
+      <li>Шило или гвоздь для отверстий</li>
+      <li>Вода</li>
+      <li>Линейка или маркер для разметки</li>
+    </ul>
+
+    <h3 style="margin-top: 25px;">📐 Пошаговая сборка</h3>
+    
+    <div style="background: rgba(0,0,0,0.2); padding: 15px; border-radius: 8px; margin: 10px 0;">
+      <h4 style="color: #f39c12; margin-bottom: 10px;">Шаг 1: Подготовка сосудов</h4>
+      <ol style="margin-left: 20px; line-height: 1.8;">
+        <li>Отрежьте верхнюю часть (горлышко) одной бутылки — это будет <strong>верхний открытый сосуд</strong>. Оставьте примерно 1/3 бутылки.</li>
+        <li>Две другие бутылки оставьте целыми с крышками — это <strong>средний</strong> и <strong>нижний</strong> закрытые сосуды.</li>
+        <li>Отметьте на бутылках уровень воды маркером (примерно 2/3 высоты).</li>
+      </ol>
+    </div>
+
+    <div style="background: rgba(0,0,0,0.2); padding: 15px; border-radius: 8px; margin: 10px 0;">
+      <h4 style="color: #f39c12; margin-bottom: 10px;">Шаг 2: Отверстия в крышках</h4>
+      <ol style="margin-left: 20px; line-height: 1.8;">
+        <li>В крышке <strong>среднего сосуда</strong> проделайте 2 отверстия шилом (диаметр чуть меньше трубки).</li>
+        <li>В крышке <strong>нижнего сосуда</strong> также проделайте 2 отверстия.</li>
+        <li>Отверстия должны быть герметичными — трубка должна входить плотно.</li>
+      </ol>
+    </div>
+
+    <div style="background: rgba(0,0,0,0.2); padding: 15px; border-radius: 8px; margin: 10px 0;">
+      <h4 style="color: #f39c12; margin-bottom: 10px;">Шаг 3: Установка трубок</h4>
+      <p style="margin-bottom: 10px;">Вставьте трубки в отверстия и загерметизируйте пластилином или горячим клеем:</p>
+      <ul style="margin-left: 20px; line-height: 1.8;">
+        <li><strong style="color: #3498db;">Трубка A (вода):</strong> из верхнего сосуда → в нижний сосуд (должна доходить до дна нижнего сосуда)</li>
+        <li><strong style="color: #e74c3c;">Трубка B (воздух):</strong> из нижнего сосуда → в средний сосуд (должна доходить до дна среднего сосуда)</li>
+        <li><strong style="color: #2ecc71;">Трубка C (фонтан):</strong> из среднего сосуда → вверх, выше верхнего сосуда (короткая, только через крышку)</li>
+      </ul>
+    </div>
+
+    <div style="background: rgba(0,0,0,0.2); padding: 15px; border-radius: 8px; margin: 10px 0;">
+      <h4 style="color: #f39c12; margin-bottom: 10px;">Шаг 4: Заполнение водой</h4>
+      <ol style="margin-left: 20px; line-height: 1.8;">
+        <li>Заполните <strong>средний сосуд</strong> водой через верхнюю трубку (фонтанную) — примерно на 2/3.</li>
+        <li>Закрутите крышку среднего сосуда плотно.</li>
+        <li>Закрутите крышку нижнего сосуда плотно.</li>
+      </ol>
+    </div>
+
+    <div style="background: rgba(0,0,0,0.2); padding: 15px; border-radius: 8px; margin: 10px 0;">
+      <h4 style="color: #f39c12; margin-bottom: 10px;">Шаг 5: Расстановка и запуск</h4>
+      <ol style="margin-left: 20px; line-height: 1.8;">
+        <li>Расставьте сосуды по высоте:
+          <ul>
+            <li>Верхний сосуд — на столе или подставке (самый высокий)</li>
+            <li>Средний сосуд — на полу или нижней полке</li>
+            <li>Нижний сосуд — ещё ниже (можно на полу рядом)</li>
+          </ul>
+        </li>
+        <li>Налейте воду в <strong>верхний сосуд</strong>.</li>
+        <li>Вода начнёт стекать в нижний сосуд, вытесняя воздух в средний — <strong>фонтан заработает!</strong></li>
+      </ol>
+    </div>
+
+    <div style="background: rgba(231, 76, 60, 0.1); border-left: 4px solid #e74c3c; padding: 15px; border-radius: 8px; margin: 15px 0;">
+      <h4 style="color: #e74c3c; margin-bottom: 10px;">⚠️ Важные моменты</h4>
+      <ul style="margin-left: 20px; line-height: 1.8;">
+        <li><strong>Герметичность!</strong> Все соединения должны быть абсолютно герметичны. Используйте пластилин или горячий клей.</li>
+        <li><strong>Высота имеет значение.</strong> Чем больше перепад высот между верхним и нижним сосудами — тем выше будет фонтан.</li>
+        <li><strong>Трубки не должны перегибаться.</strong> Проверьте, что вода и воздух могут свободно проходить.</li>
+        <li><strong>Фонтан не вечный.</strong> Он работает, пока есть вода в верхнем сосуде. Когда вода закончится — фонтан остановится.</li>
+      </ul>
+    </div>
+
+    <div style="background: rgba(46, 204, 113, 0.1); border-left: 4px solid #2ecc71; padding: 15px; border-radius: 8px; margin: 15px 0;">
+      <h4 style="color: #2ecc71; margin-bottom: 10px;">💡 Советы по улучшению</h4>
+      <ul style="margin-left: 20px; line-height: 1.8;">
+        <li>Используйте прозрачные трубки — видно, как движется вода и воздух</li>
+        <li>Добавьте краситель в воду для наглядности</li>
+        <li>Экспериментируйте с высотой расположения сосудов</li>
+        <li>Попробуйте разные диаметры трубок</li>
+        <li>Сделайте подставку из картона или дерева для устойчивости</li>
+      </ul>
+    </div>
+
+    <h3 style="margin-top: 25px;">🔬 Объяснение физики</h3>
+    <p style="line-height: 1.8;">Фонтан Герона работает благодаря трём физическим принципам:</p>
+    <ol style="margin-left: 20px; line-height: 1.8;">
+      <li><strong>Гидростатическое давление:</strong> вода в верхнем сосуде создаёт давление, пропорциональное высоте столба (p = ρgh)</li>
+      <li><strong>Вытеснение воздуха:</strong> вода, стекая в нижний сосуд, вытесняет воздух, который не может выйти наружу (сосуд закрыт)</li>
+      <li><strong>Передача давления:</strong> воздух по трубке переходит в средний сосуд и создаёт давление на поверхность воды, выталкивая её вверх по фонтанной трубке</li>
+    </ol>
+    <p style="margin-top: 10px; line-height: 1.8;">Высота фонтана примерно равна перепаду высот между верхним и нижним сосудами (минус потери на трение в трубках).</p>
+  </div>
+</section>
+
+<script>
+/* ========= НАВИГАЦИЯ ========= */
+const navBtns = document.querySelectorAll('#nav button');
+const exps = document.querySelectorAll('.experiment');
+navBtns.forEach(btn => {
+  btn.addEventListener('click', () => {
+    navBtns.forEach(b => b.classList.remove('active'));
+    exps.forEach(e => e.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('exp' + btn.dataset.exp).classList.add('active');
+  });
+});
+
+/* ========= ЭКСПЕРИМЕНТ 0: СООБЩАЮЩИЕСЯ СОСУДЫ ========= */
+const c0 = document.getElementById('c0'), ctx0 = c0.getContext('2d');
+let connected0 = false;
+let waterLevel0 = {left: 200, right: 300, targetLeft: 200, targetRight: 300};
+let particles0 = [];
+
+function draw0() {
+  ctx0.clearRect(0, 0, 800, 450);
+  
+  ctx0.fillStyle = '#34495e';
+  ctx0.fillRect(150, 100, 100, 300);
+  ctx0.fillRect(550, 100, 100, 300);
+  
+  if (connected0) {
+    ctx0.fillStyle = '#2c3e50';
+    ctx0.fillRect(250, 350, 300, 20);
+  }
+  
+  ctx0.fillStyle = 'rgba(52,152,219,0.7)';
+  ctx0.fillRect(155, waterLevel0.left, 90, 400 - waterLevel0.left);
+  ctx0.fillRect(555, waterLevel0.right, 90, 400 - waterLevel0.right);
+  
+  if (connected0) {
+    ctx0.fillRect(250, 350, 300, 20);
+  }
+  
+  if (connected0 && Math.abs(waterLevel0.left - waterLevel0.targetLeft) > 1) {
+    if (particles0.length < 20) {
+      particles0.push({x: 250, progress: 0});
+    }
+    particles0.forEach(p => {
+      p.progress += 0.02;
+      if (p.progress > 1) p.progress = 0;
+      p.x = 250 + p.progress * 300;
+      ctx0.fillStyle = '#5dade2';
+      ctx0.beginPath();
+      ctx0.arc(p.x, 360, 3, 0, Math.PI * 2);
+      ctx0.fill();
+    });
+  }
+  
+  if (connected0) {
+    const avg = (waterLevel0.targetLeft + waterLevel0.targetRight) / 2;
+    waterLevel0.left += (avg - waterLevel0.left) * 0.05;
+    waterLevel0.right += (avg - waterLevel0.right) * 0.05;
+  } else {
+    waterLevel0.left += (waterLevel0.targetLeft - waterLevel0.left) * 0.1;
+    waterLevel0.right += (waterLevel0.targetRight - waterLevel0.right) * 0.1;
+  }
+  
+  ctx0.fillStyle = '#fff';
+  ctx0.font = '14px sans-serif';
+  ctx0.fillText('Левый сосуд', 150, 90);
+  ctx0.fillText('Правый сосуд', 550, 90);
+  ctx0.fillText('h₁ = ' + (400 - waterLevel0.left).toFixed(0), 150, 420);
+  ctx0.fillText('h₂ = ' + (400 - waterLevel0.right).toFixed(0), 550, 420);
+  
+  requestAnimationFrame(draw0);
+}
+
+function connectVessels() {
+  connected0 = !connected0;
+  particles0 = [];
+  document.getElementById('r0').innerHTML = connected0 ? 
+    'Сосуды соединены<br>Уровни выравниваются...' : 
+    'Сосуды разделены<br>Перемещайте слайдеры для изменения уровней';
+}
+
+['s0l','s0r'].forEach(id => {
+  document.getElementById(id).addEventListener('input', () => {
+    waterLevel0.targetLeft = +document.getElementById('s0l').value;
+    waterLevel0.targetRight = +document.getElementById('s0r').value;
+    document.getElementById('v0l').textContent = document.getElementById('s0l').value + ' пикс';
+    document.getElementById('v0r').textContent = document.getElementById('s0r').value + ' пикс';
+  });
+});
+draw0();
+
+/* ========= ЭКСПЕРИМЕНТ 1: ГИДРОСТАТИЧЕСКОЕ ДАВЛЕНИЕ (БОКОВОЕ ОТВЕРСТИЕ) ========= */
+const c1 = document.getElementById('c1'), ctx1 = c1.getContext('2d');
+let particles1 = [];
+
+function draw1() {
+  ctx1.clearRect(0, 0, 800, 450);
+  
+  const H = +document.getElementById('s1h').value / 10;
+  const rho = +document.getElementById('s1rho').value;
+  
+  // Стол
+  ctx1.fillStyle = '#5d4037';
+  ctx1.fillRect(0, 380, 800, 70);
+  ctx1.fillStyle = '#8d6e63';
+  ctx1.fillRect(0, 380, 800, 5);
+  
+  // Сосуд на столе
+  const vesselH = 200;
+  const vesselX = 100;
+  const vesselY = 380 - vesselH;
+  ctx1.fillStyle = '#34495e';
+  ctx1.fillRect(vesselX, vesselY, 150, vesselH);
+  
+  // Вода в сосуде
+  ctx1.fillStyle = 'rgba(52,152,219,0.7)';
+  ctx1.fillRect(vesselX + 5, vesselY + 5, 140, vesselH - 10);
+  
+  // Боковое отверстие (справа, на высоте 50px от дна)
+  const holeY = vesselY + vesselH - 50;
+  const holeX = vesselX + 150;
+  ctx1.fillStyle = '#2c3e50';
+  ctx1.fillRect(holeX, holeY, 10, 15);
+  
+  // Скорость истечения
+  const v = Math.sqrt(2 * 9.81 * H);
+  const tableHeight = 0.8; // высота стола в метрах
+  const fallTime = Math.sqrt(2 * tableHeight / 9.81);
+  const range = v * fallTime;
+  const rangePixels = range * 80; // масштаб
+  
+  // Частицы воды вылетают из отверстия
+  if (particles1.length < 50) {
+    particles1.push({
+      x: holeX + 10,
+      y: holeY + 7,
+      vx: v * 8, // горизонтальная скорость
+      vy: 0
+    });
+  }
+  
+  particles1.forEach(p => {
+    p.x += p.vx * 0.05;
+    p.y += p.vy * 0.05;
+    p.vy += 0.5; // гравитация
+    
+    // Рисуем частицу
+    ctx1.fillStyle = '#5dade2';
+    ctx1.beginPath();
+    ctx1.arc(p.x, p.y, 3, 0, Math.PI * 2);
+    ctx1.fill();
+  });
+  
+  // Удаляем частицы за пределами
+  particles1 = particles1.filter(p => p.y < 380 && p.x < 800);
+  
+  // Линия дальности полёта
+  ctx1.strokeStyle = '#e74c3c';
+  ctx1.lineWidth = 2;
+  ctx1.setLineDash([5, 5]);
+  ctx1.beginPath();
+  ctx1.moveTo(holeX + 10, 380);
+  ctx1.lineTo(holeX + 10 + rangePixels, 380);
+  ctx1.stroke();
+  ctx1.setLineDash([]);
+  
+  // Стрелка дальности
+  ctx1.fillStyle = '#e74c3c';
+  ctx1.font = 'bold 14px sans-serif';
+  ctx1.fillText('L = ' + range.toFixed(2) + ' м', holeX + 10 + rangePixels/2 - 30, 400);
+  
+  // Подписи
+  ctx1.fillStyle = '#fff';
+  ctx1.font = '14px sans-serif';
+  ctx1.fillText('H = ' + H.toFixed(1) + ' м', vesselX + 20, vesselY - 10);
+  ctx1.fillText('ρ = ' + rho + ' кг/м³', vesselX + 20, vesselY + 10);
+  
+  // Стрелка высоты H
+  ctx1.strokeStyle = '#f39c12';
+  ctx1.lineWidth = 2;
+  ctx1.beginPath();
+  ctx1.moveTo(vesselX - 20, vesselY + 5);
+  ctx1.lineTo(vesselX - 20, holeY + 7);
+  ctx1.stroke();
+  ctx1.fillStyle = '#f39c12';
+  ctx1.fillText('H', vesselX - 35, (vesselY + holeY) / 2);
+  
+  const p = rho * 9.81 * H;
+  document.getElementById('r1').innerHTML = 
+    `Давление у отверстия: ${(p/1000).toFixed(1)} кПа<br>` +
+    `Скорость истечения: ${v.toFixed(1)} м/с<br>` +
+    `Дальность полёта: ${range.toFixed(2)} м`;
+  
+  requestAnimationFrame(draw1);
+}
+
+['s1h','s1rho'].forEach(id => {
+  document.getElementById(id).addEventListener('input', () => {
+    document.getElementById('v1h').textContent = (+document.getElementById('s1h').value/10).toFixed(1) + ' м';
+    document.getElementById('v1rho').textContent = document.getElementById('s1rho').value + ' кг/м³';
+  });
+});
+draw1();
+
+/* ========= ЭКСПЕРИМЕНТ 2: ВЫТЕСНЕНИЕ ВОЗДУХА С ПОРШНЕМ ========= */
+const c2 = document.getElementById('c2'), ctx2 = c2.getContext('2d');
+let flowing2 = false;
+let waterLevel2 = 350;
+let pistonY2 = 150;
+let airParticles2 = [];
+let waterParticles2 = [];
+
+function draw2() {
+  ctx2.clearRect(0, 0, 800, 450);
+  
+  const speed = +document.getElementById('s2v').value;
+  
+  // Сосуд
+  ctx2.fillStyle = '#34495e';
+  ctx2.fillRect(300, 100, 200, 300);
+  
+  // Вода в сосуде
+  ctx2.fillStyle = 'rgba(52,152,219,0.7)';
+  ctx2.fillRect(305, waterLevel2, 190, 400 - waterLevel2);
+  
+  // Воздух (область между поршнем и водой)
+  ctx2.fillStyle = 'rgba(189,195,199,0.3)';
+  ctx2.fillRect(305, pistonY2, 190, waterLevel2 - pistonY2);
+  
+  // Поршень
+  ctx2.fillStyle = '#7f8c8d';
+  ctx2.fillRect(295, pistonY2 - 10, 210, 15);
+  ctx2.fillStyle = '#95a5a6';
+  ctx2.fillRect(390, 50, 20, pistonY2 - 60); // шток поршня
+  
+  // Входящая трубка (вода)
+  ctx2.fillStyle = '#2c3e50';
+  ctx2.fillRect(350, 50, 20, 100);
+  
+  // Поток воды вниз
+  if (flowing2 && waterLevel2 > 200) {
+    if (waterParticles2.length < 20) {
+      waterParticles2.push({x: 360, y: 50});
+    }
+    waterParticles2.forEach(p => {
+      p.y += speed * 0.1;
+      ctx2.fillStyle = '#3498db';
+      ctx2.beginPath();
+      ctx2.arc(p.x, p.y, 3, 0, Math.PI * 2);
+      ctx2.fill();
+    });
+    waterParticles2 = waterParticles2.filter(p => p.y < waterLevel2);
+    
+    // Уровень воды растёт, поршень поднимается
+    waterLevel2 -= speed * 0.008;
+    pistonY2 -= speed * 0.006;
+    
+    // Ограничение поршня
+    if (pistonY2 < 120) {
+      pistonY2 = 120;
+      waterLevel2 = 200;
+    }
+  }
+  
+  // Подписи
+  ctx2.fillStyle = '#fff';
+  ctx2.font = '14px sans-serif';
+  ctx2.fillText('Вода входит', 320, 40);
+  ctx2.fillText('Поршень', 420, 40);
+  ctx2.fillText('Уровень воды: ' + (400 - waterLevel2).toFixed(0), 320, 430);
+  ctx2.fillText('Высота поршня: ' + (350 - pistonY2).toFixed(0), 320, 445);
+  
+  document.getElementById('r2').innerHTML = flowing2 ? 
+    `Вода заполняет сосуд<br>Воздух сжимается и толкает поршень вверх<br>Давление воздуха: ${(101 + (400-waterLevel2)*0.15).toFixed(1)} кПа` :
+    'Нажмите "Начать подачу воды" для запуска';
+  
+  requestAnimationFrame(draw2);
+}
+
+function startFlow() {
+  flowing2 = true;
+  waterParticles2 = [];
+}
+
+function resetFlow() {
+  flowing2 = false;
+  waterLevel2 = 350;
+  pistonY2 = 150;
+  waterParticles2 = [];
+  airParticles2 = [];
+  document.getElementById('r2').innerHTML = 'Эксперимент сброшен<br>Нажмите "Начать подачу воды" для запуска';
+}
+
+document.getElementById('s2v').addEventListener('input', () => {
+  document.getElementById('v2v').textContent = document.getElementById('s2v').value + '%';
+});
+draw2();
+</script>
+</body>
+</html>
